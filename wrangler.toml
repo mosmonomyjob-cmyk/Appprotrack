@@ -1,13 +1,7 @@
-# Wrangler configuration file for Cloudflare Pages deployment.
-# Place this file in the root of your repository.
-
 name = "appprotrack"
+compatibility_date = "2026-06-02"
 
-# Define Pages build folder (root directory contains our static assets)
-pages_build_output_dir = "."
-
-# Bindings for Cloudflare D1 Database
-[[d1_databases]]
-binding = "DB"                                   # Binding name used in backend context: context.env.DB
-database_name = "appprotrack-db"                 # The D1 database name in Cloudflare
-database_id = "1b72feac-264a-420c-b472-e265ffe332da"                 # Replace with your actual D1 Database ID from Cloudflare Dashboard
+# เพิ่มคำสั่งเปิดทางให้ Cloudflare อัปโหลดและแสดงผล Static Assets (หน้าเว็บทั้งหมดของคุณ)
+[assets]
+directory = "."
+binding = "ASSETS"

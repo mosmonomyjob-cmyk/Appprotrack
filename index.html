@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการสถานะงานเคลมสินค้า - Claims Management System</title>
+    <!-- CSS Design System -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- SheetJS CDN for CSV/Excel Parsing & Writing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- ==========================================
+             1. LOGIN PAGE SCREEN
+             ========================================== -->
+        <div id="login-screen" class="login-wrapper">
+            <div class="login-card glass-card">
+                <div class="login-logo">
+                    <div class="icon">📦</div>
+                    <h1>AppProTrack</h1>
+                    <p>ระบบติดตามและจัดการสถานะงานเคลมสินค้า</p>
+                </div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">ชื่อผู้ใช้งาน (Username)</label>
+                        <input type="text" id="login-username" class="form-control" placeholder="กรอกชื่อผู้ใช้งาน..." required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">รหัสผ่าน (Password)</label>
+                        <input type="password" id="login-password" class="form-control" placeholder="กรอกรหัสผ่าน..." required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                        <span>เข้าสู่ระบบ</span>
+                    </button>
+                </form>
+                <div class="login-footer-info">
+                    <p>© 2026 Claim Management & Todo List System</p>
+                    <p style="font-size: 0.75rem; margin-top: 4px; opacity: 0.7;">
+                        Admin: admin/password | User: banana_sup1/password
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             2. MAIN DASHBOARD SCREEN (Hidden by default)
+             ========================================== -->
+        <div id="dashboard-screen" style="display: none;">
+            <!-- Header Bar -->
+            <header class="app-header glass-card">
+                <div class="container header-container">
+                    <div class="header-brand">
+                        <span class="icon">📋</span>
+                        <div>
+                            <h2>AppProTrack</h2>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">ระบบบันทึกสถานะงานเคลมสินค้า</p>
+                        </div>
+                    </div>
+                    <div class="user-profile">
+                        <button id="theme-toggle" class="theme-toggle-btn" title="เปลี่ยนธีม สีสว่าง/สีมืด">🌓</button>
+                        <div class="user-info">
+                            <span id="current-user-display" class="username">Username</span>
+                            <span id="current-role-badge" class="role-badge">Role</span>
+                        </div>
+                        <button id="logout-btn" class="btn btn-secondary btn-sm">ออกจากระบบ</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main App Content -->
+            <main class="main-content">
+                <div class="container">
+                    <!-- Stat Cards Grid -->
+                    <section class="stats-grid">
+                        <div class="stat-card glass-card total">
+                            <div class="stat-card-content">
+                                <div class="stat-card-header">
+                                    <span class="title">งานเคลมทั้งหมด</span>
+                                    <span class="icon">📦</span>
+                                </div>
+                                <span id="stat-total" class="value">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card pending">
+                            <div class="stat-card-content">
+                                <div class="stat-card-header">
+                                    <span class="title">ยังไม่ได้รับสินค้า</span>
+                                    <span class="icon">⏳</span>
+                                </div>
+                                <span id="stat-pending" class="value">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card repairing">
+                            <div class="stat-card-content">
+                                <div class="stat-card-header">
+                                    <span class="title">อยู่ระหว่างซ่อม</span>
+                                    <span class="icon">⚙️</span>
+                                </div>
+                                <span id="stat-repairing" class="value">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card completed">
+                            <div class="stat-card-content">
+                                <div class="stat-card-header">
+                                    <span class="title">ซ่อมเสร็จพร้อมส่ง</span>
+                                    <span class="icon">✅</span>
+                                </div>
+                                <span id="stat-completed" class="value">0</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Control Panel (Actions & Filters) -->
+                    <section class="control-panel glass-card">
+                        <!-- Action Buttons -->
+                        <div class="action-row">
+                            <h3 style="font-weight: 800;">รายการติดตามการเคลม</h3>
+                            <div class="btn-group">
+                                <!-- Admin Specific Buttons -->
+                                <button id="btn-add-claim" class="btn btn-primary admin-only">➕ เพิ่มรายการใบเคลม</button>
+                                <button id="btn-import-excel" class="btn btn-outline admin-only">📥 นำเข้าข้อมูล (Excel/CSV)</button>
+                                <button id="btn-manage-users" class="btn btn-secondary admin-only">👥 จัดการบัญชีผู้ใช้</button>
+                                <!-- Shared Buttons -->
+                                <button id="btn-export-excel" class="btn btn-secondary">📤 ส่งออก Excel</button>
+                            </div>
+                        </div>
+
+                        <!-- Filters Grid -->
+                        <div class="filter-grid">
+                            <!-- Search -->
+                            <div class="search-input-wrapper">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="search-filter" class="form-control" placeholder="ค้นหา เลขที่ใบเคลม, Serial, ชื่อลูกค้า, สาขา...">
+                            </div>
+                            
+                            <!-- Filter: Status-รับสินค้า -->
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <select id="filter-receive-status" class="form-control">
+                                    <option value="">-- สถานะรับสินค้าทั้งหมด --</option>
+                                    <option value="ยังไม่ได้รับ">ยังไม่ได้รับ</option>
+                                    <option value="รับสินค้าแล้ว">รับสินค้าแล้ว</option>
+                                    <option value="อยู่ระหว่างซ่อม">อยู่ระหว่างซ่อม</option>
+                                </select>
+                            </div>
+
+                            <!-- Filter: ผลการเคลม -->
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <select id="filter-claim-result" class="form-control">
+                                    <option value="">-- ผลการเคลมทั้งหมด --</option>
+                                    <option value="เปลี่ยนตัวใหม่">เปลี่ยนตัวใหม่</option>
+                                    <option value="ซ่อมคืนตัวเดิม">ซ่อมคืนตัวเดิม</option>
+                                    <option value="ยกเลิกซ่อม">ยกเลิกซ่อม</option>
+                                </select>
+                            </div>
+
+                            <!-- Filter: ซ่อมเสร็จพร้อมส่ง -->
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <select id="filter-repair-ready" class="form-control">
+                                    <option value="">-- สถานะซ่อมเสร็จทั้งหมด --</option>
+                                    <option value="เสร็จแล้วรอ Book">เสร็จแล้วรอ Book</option>
+                                    <option value="อยู่ระหว่าง Booking">อยู่ระหว่าง Booking</option>
+                                    <option value="Booking แล้ว">Booking แล้ว</option>
+                                </select>
+                            </div>
+
+                            <!-- Filter: Supplier Code (Admin only) -->
+                            <div class="form-group admin-only" style="margin-bottom: 0;" id="filter-supplier-container">
+                                <select id="filter-supplier-code" class="form-control">
+                                    <option value="">-- Supplier Code ทั้งหมด --</option>
+                                    <!-- Seeded dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Claims Data Table Container -->
+                    <section class="glass-card" style="padding: 10px;">
+                        <div class="table-wrapper">
+                            <table class="data-table" id="claims-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable sort-desc" data-column="createTime">วันที่รับเรื่อง</th>
+                                        <th class="sortable" data-column="claimId">เลขที่ใบเคลม</th>
+                                        <th>สินค้า / รายละเอียด</th>
+                                        <th class="sortable" data-column="supplierCode">Supplier Code</th>
+                                        <th class="sortable" data-column="receiveStatus">Status-รับสินค้า</th>
+                                        <th>Job Supplier</th>
+                                        <th class="sortable" data-column="claimResult">ผลการเคลม</th>
+                                        <th class="sortable" data-column="repairReady">ซ่อมเสร็จพร้อมส่ง</th>
+                                        <th>หมายเหตุ</th>
+                                        <th style="text-align: center; width: 140px;">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="claims-table-body">
+                                    <!-- Populated dynamically via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Table Empty State -->
+                        <div id="table-empty" class="table-empty-state" style="display: none;">
+                            <div class="icon">📂</div>
+                            <h3>ไม่พบข้อมูลงานเคลม</h3>
+                            <p>ไม่มีข้อมูลงานเคลมที่ตรงกับเงื่อนไขการค้นหา/ตัวกรองในขณะนี้</p>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         3. MODALS SECTION
+         ========================================== -->
+
+    <!-- Modal A: Add/Edit Claim Form -->
+    <div id="claim-modal" class="modal-backdrop">
+        <div class="modal-container glass-card">
+            <div class="modal-header">
+                <h3 id="claim-modal-title">แก้ไขรายละเอียดใบเคลม</h3>
+                <button class="modal-close" onclick="closeModal('claim-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="claim-form">
+                    <!-- Hidden field to check if edit mode -->
+                    <input type="hidden" id="form-mode" value="add">
+                    <input type="hidden" id="form-create-time">
+
+                    <h4 style="margin-bottom: 12px; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        ข้อมูลงานเคลมหลัก (แก้ไขได้โดย Admin)
+                    </h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="form-claim-id">เลขที่ใบเคลม <span style="color:var(--danger)">*</span></label>
+                            <input type="text" id="form-claim-id" class="form-control admin-field" required placeholder="เช่น CLM-2026-0001">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-supplier-code">Supplier Code <span style="color:var(--danger)">*</span></label>
+                            <input type="text" id="form-supplier-code" class="form-control admin-field" required placeholder="เช่น SUP001">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-branch-name">ชื่อสาขา</label>
+                            <input type="text" id="form-branch-name" class="form-control admin-field" placeholder="เช่น เซ็นทรัลพระราม 9">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-product-category">ประเภทสินค้า (Product)</label>
+                            <input type="text" id="form-product-category" class="form-control admin-field" placeholder="เช่น Laptop, Accessories">
+                        </div>
+                        <div class="form-group form-grid-full">
+                            <label for="form-product-name">ชื่อสินค้า (Product Name)</label>
+                            <input type="text" id="form-product-name" class="form-control admin-field" placeholder="เช่น Asus ROG Strix G16">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-serial-number">Serial Number</label>
+                            <input type="text" id="form-serial-number" class="form-control admin-field" placeholder="กรอกรหัส Serial...">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-customer-name">ชื่อลูกค้า</label>
+                            <input type="text" id="form-customer-name" class="form-control admin-field" placeholder="ชื่อ-นามสกุล...">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-customer-tel">เบอร์โทรศัพท์ (Tel)</label>
+                            <input type="text" id="form-customer-tel" class="form-control admin-field" placeholder="08x-xxx-xxxx">
+                        </div>
+                        <div class="form-group form-grid-full">
+                            <label for="form-issue-description">อาการเสียที่ลูกค้าแจ้ง</label>
+                            <textarea id="form-issue-description" class="form-control admin-field" rows="2" placeholder="ระบุอาการเสียโดยละเอียด..."></textarea>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 24px 0 12px; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        รายละเอียดการขนส่งและการคืนสินค้า (แก้ไขได้โดย Admin)
+                    </h4>
+                    <div class="form-grid">
+                        <div class="form-group form-grid-full">
+                            <label for="form-sender-address">ที่อยู่ผู้ส่ง- Banana</label>
+                            <input type="text" id="form-sender-address" class="form-control admin-field" placeholder="กรอกที่อยู่ผู้ส่ง...">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-packing-list">Packing List</label>
+                            <input type="text" id="form-packing-list" class="form-control admin-field" placeholder="ระบุ Packing List...">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-dhl-booking-no">Booking Number DHL</label>
+                            <input type="text" id="form-dhl-booking-no" class="form-control admin-field" placeholder="เช่น DHL-99882">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-return-destination">ส่งกลับหน้าร้าน-บ้าน ลค.</label>
+                            <input type="text" id="form-return-destination" class="form-control admin-field" placeholder="ระบุปลายทางส่งกลับ...">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-return-dhl-booking-no">Return - Booking Number DHL</label>
+                            <input type="text" id="form-return-dhl-booking-no" class="form-control admin-field" placeholder="รหัส Booking ขากลับ...">
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 24px 0 12px; color: var(--success); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        ส่วนบันทึกสถานะงานเคลม (แก้ไขได้ทั้ง Admin และ User)
+                    </h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="form-receive-status">Status-รับสินค้า</label>
+                            <select id="form-receive-status" class="form-control">
+                                <option value="ยังไม่ได้รับ">ยังไม่ได้รับ</option>
+                                <option value="รับสินค้าแล้ว">รับสินค้าแล้ว</option>
+                                <option value="อยู่ระหว่างซ่อม">อยู่ระหว่างซ่อม</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="form-job-supplier">Job Supplier</label>
+                            <input type="text" id="form-job-supplier" class="form-control" placeholder="เช่น JOB-1234">
+                        </div>
+                        <div class="form-group">
+                            <label for="form-claim-result">ผลการเคลม</label>
+                            <select id="form-claim-result" class="form-control">
+                                <option value="เปลี่ยนตัวใหม่">เปลี่ยนตัวใหม่</option>
+                                <option value="ซ่อมคืนตัวเดิม">ซ่อมคืนตัวเดิม</option>
+                                <option value="ยกเลิกซ่อม">ยกเลิกซ่อม</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="form-repair-ready">ซ่อมเสร็จพร้อมส่ง</label>
+                            <select id="form-repair-ready" class="form-control">
+                                <option value="เสร็จแล้วรอ Book">เสร็จแล้วรอ Book</option>
+                                <option value="อยู่ระหว่าง Booking">อยู่ระหว่าง Booking</option>
+                                <option value="Booking แล้ว">Booking แล้ว</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-grid-full">
+                            <label for="form-remark">หมายเหตุ</label>
+                            <textarea id="form-remark" class="form-control" rows="2" placeholder="ระบุข้อมูลเพิ่มเติม..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Image Management (Admin uploads, User prints/views only) -->
+                    <h4 style="margin: 24px 0 12px; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        รูปภาพหลักฐานงานเคลม (Admin อัพโหลดเท่านั้น / User ดูและปริ้นได้)
+                    </h4>
+                    <div class="image-upload-wrapper">
+                        <!-- Admin File Input -->
+                        <div id="image-upload-control" class="form-group admin-only" style="margin-bottom: 0;">
+                            <label for="form-image-file">อัปโหลดรูปภาพสินค้า/ใบส่งเคลม</label>
+                            <input type="file" id="form-image-file" class="form-control" accept="image/*">
+                        </div>
+                        <!-- Preview container -->
+                        <div class="image-preview-box">
+                            <div id="image-preview-placeholder" class="placeholder">
+                                <span class="icon">🖼️</span>
+                                <p>ไม่มีรูปภาพแนบในใบเคลมนี้</p>
+                            </div>
+                            <img id="form-image-preview" src="" alt="Claim Preview" style="display: none;">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('claim-modal')">ยกเลิก</button>
+                <button type="submit" form="claim-form" class="btn btn-primary">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal B: User Account Management -->
+    <div id="users-modal" class="modal-backdrop">
+        <div class="modal-container glass-card" style="max-width: 750px;">
+            <div class="modal-header">
+                <h3>จัดการบัญชีผู้ใช้งาน (User Management)</h3>
+                <button class="modal-close" onclick="closeModal('users-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="user-mgmt-layout">
+                    <!-- Create user form -->
+                    <form id="create-user-form" style="border-right: 1px solid var(--border-color); padding-right: 20px;">
+                        <h4 style="margin-bottom: 16px;">สร้างบัญชีใหม่</h4>
+                        <div class="form-group">
+                            <label for="new-username">Username</label>
+                            <input type="text" id="new-username" class="form-control" placeholder="เช่น user_bkk" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">Password</label>
+                            <input type="password" id="new-password" class="form-control" placeholder="อย่างน้อย 4 ตัวอักษร" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="new-role">บทบาท (Role)</label>
+                            <select id="new-role" class="form-control" required>
+                                <option value="user">User (Supplier)</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="supplier-code-group">
+                            <label for="new-supplier-code">Supplier Code <span style="color:var(--danger)">*</span></label>
+                            <input type="text" id="new-supplier-code" class="form-control" placeholder="เช่น SUP001">
+                            <p style="font-size:0.75rem; color: var(--text-muted); margin-top:2px;">User จะเห็นและอัพเดตเฉพาะงานเคลมที่มีรหัสตรงกันนี้</p>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">➕ สร้างผู้ใช้</button>
+                    </form>
+
+                    <!-- Active User Accounts list -->
+                    <div>
+                        <h4 style="margin-bottom: 16px;">บัญชีผู้ใช้งานในระบบ</h4>
+                        <div class="user-list-box" id="users-list-container">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal C: Import CSV/Excel -->
+    <div id="import-modal" class="modal-backdrop">
+        <div class="modal-container glass-card" style="max-width: 550px;">
+            <div class="modal-header">
+                <h3>นำเข้าข้อมูลงานเคลมเคลมสินค้า (Excel/CSV Bulk Import)</h3>
+                <button class="modal-close" onclick="closeModal('import-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; font-size: 0.85rem;">
+                    คุณสามารถอัปโหลดไฟล์ Excel (.xlsx, .xls) หรือ CSV เพื่อนำเข้าข้อมูลใบเคลมจำนวนมากได้
+                    โดยหัวตาราง (Header) ของไฟล์นำเข้า **ควรตรงกับชื่อฟิลด์** เพื่อความถูกต้องของข้อมูล
+                </p>
+                <div class="form-group">
+                    <label for="import-file-input">เลือกไฟล์ข้อมูล (.xlsx, .xls, .csv)</label>
+                    <input type="file" id="import-file-input" class="form-control" accept=".xlsx, .xls, .csv">
+                </div>
+                
+                <!-- Import summary/preview -->
+                <div id="import-preview-container" class="import-preview-box" style="display: none;">
+                    <h4 style="color: var(--primary);">สรุปข้อมูลจากการอ่านไฟล์</h4>
+                    <p style="font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;">
+                        พบข้อมูลทั้งหมด: <span id="import-count-label" style="color: var(--success);">0</span> รายการ
+                    </p>
+                    <div class="import-preview-list" id="import-preview-list">
+                        <!-- Dynamic list of sheet rows -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('import-modal')">ยกเลิก</button>
+                <button id="btn-import-confirm" class="btn btn-primary" disabled>ยืนยันการนำเข้าข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal D: Print View Window (Normally hidden on screen, formatted for printing) -->
+    <div id="print-modal" class="modal-backdrop">
+        <div class="modal-container glass-card" style="max-width: 900px; max-height: 95vh;">
+            <div class="modal-header no-print">
+                <h3>ตัวอย่างก่อนพิมพ์ (Print Preview)</h3>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ พิมพ์เอกสาร</button>
+                    <button class="modal-close" onclick="closeModal('print-modal')">×</button>
+                </div>
+            </div>
+            <div class="modal-body" style="background: var(--bg-input); padding: 20px;">
+                <!-- Printable document page -->
+                <div id="print-document-container" class="print-document">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Core Application Modules -->
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

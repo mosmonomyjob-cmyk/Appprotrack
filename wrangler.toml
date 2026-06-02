@@ -1,6 +1,0 @@
-name = "appprotrack"
-compatibility_date = "2026-06-02"
-
-# เพิ่มคำสั่งเปิดทางให้ Cloudflare อัปโหลดและแสดงผล Static Assets (หน้าเว็บทั้งหมดของคุณ)
-[assets]
-directory = "."
